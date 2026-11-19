@@ -44,7 +44,8 @@ F_RIGHT = ${FR}    # F for the right wheel: go power (%)`
 
   return `# PID Drive Lab: drive back and forth between two lines with F + P.
 # Numbers copied from the simulator. Paste into code.pybricks.com
-# (SPIKE Prime hub running Pybricks).
+# (SPIKE Prime hub running Pybricks: install the latest firmware from
+# code.pybricks.com > Tools first). The hub lies flat with its light matrix up.
 
 from pybricks.hubs import PrimeHub
 from pybricks.pupdevices import Motor

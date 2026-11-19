@@ -4,6 +4,7 @@ import { simulate, DEFAULTS, frameIndexAt } from './physics.js';
 import { createScene } from './scene.js';
 import { createCharts } from './charts.js';
 import { pybricksCode, fPower } from './codegen.js';
+import { readButton, stopSpeaking } from './speak.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -62,6 +63,9 @@ function writeUI() {
     KNOBS[k].out.textContent = v;
   }
   const c = state.cfg;
+  KNOBS.kf.range.disabled = c.splitF;
+  document.querySelectorAll('.nudge[data-k=kf]').forEach((b) => { b.disabled = c.splitF; });
+  $('kf-out').textContent = c.splitF ? 'L/R' : fPower(c);
   $('splitF').checked = c.splitF;
   $('split-box').hidden = !c.splitF;
   $('kfL').value = Math.round(c.kfL * SPEED); $('kfL-out').textContent = Math.round(c.kfL * SPEED);
@@ -91,7 +95,7 @@ function changed(delay = 0) {
 for (const k in KNOBS) {
   const kn = KNOBS[k];
   kn.range.addEventListener('input', () => { const v = parseInt(kn.range.value, 10); kn.set(v); kn.out.textContent = v; $('btn-run').classList.add('pulse'); });
-  kn.range.addEventListener('change', () => changed(0));
+  kn.range.addEventListener('change', () => changed(250)); // arrow keys fire change on every press
 }
 document.querySelectorAll('.nudge').forEach((b) => b.addEventListener('click', () => {
   const kn = KNOBS[b.dataset.k];
@@ -136,7 +140,7 @@ function applyView() {
   scene.opts.ghost = v.ghost;
   scene.opts.laser = v.laser;
   scene.opts.trails = v.trails;
-  if (typeof redraw === 'function') redraw();
+  redraw();
   for (const k in VIEW_OPTS) $(VIEW_OPTS[k]).checked = !!v[k];
   requestAnimationFrame(onResize);
 }
@@ -152,6 +156,7 @@ $('btn-mystery').addEventListener('click', () => {
   state.cfg.seed = 1 + Math.floor(Math.random() * 9999);
   Object.assign(state.cfg, START, { splitF: false });
   $('btn-normal').hidden = false;
+  $('robot-name').textContent = 'Mystery robot 🎲';
   writeUI();
   runSim(true);
 });
@@ -159,6 +164,7 @@ $('btn-normal').addEventListener('click', () => {
   state.mystery = false; state.revealed = false;
   Object.assign(state.cfg, CLASS_ROBOT);
   $('btn-normal').hidden = true;
+  $('robot-name').textContent = 'Class robot';
   updateWeakInfo();
   runSim(true);
 });
@@ -191,6 +197,8 @@ function runSim(autoplay = true) {
 }
 
 function loadRun(entry) {
+  clearTimeout(autoTimer);
+  $('btn-run').classList.remove('pulse');
   const sim = entry.sim;
   const previous = state.history.filter((h) => h !== entry).map((h) => h.sim);
   scene.setRun(sim, previous);
@@ -205,7 +213,7 @@ function loadRun(entry) {
 function onEnd() {
   const entry = state.history.find((h) => h.sim === state.sim);
   const first = entry && !entry.revealed;
-  if (entry) entry.revealed = true;
+  if (entry) { entry.revealed = true; entry.watched = true; }
   renderLog();
   showPop();
   if (first) checkMissions(state.sim);
@@ -299,17 +307,47 @@ function showPop() {
   pop.className = `result-pop ${r.coach.tone}`;
   $('pop-stars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < r.stars ? 'on' : ''}">★</span>`).join('');
   $('pop-title').textContent = r.coach.title;
-  $('pop-text').textContent = r.coach.text;
+  $('pop-text').textContent = r.coach.tone === 'good' ? `${r.coach.text} ${nextMissionLine()}` : r.coach.text;
   const race = r.endReason === 'stuck' || r.endReason === 'tooSlow' ? 'Too slow'
     : Math.abs(r.speedErrPct) < 6 ? 'Kept up ✓' : r.speedErrPct < 0 ? 'Too slow' : 'Too fast';
   $('pop-stats').innerHTML = [
     ['Most off the path', `${Math.round(r.driftCm)} cm`],
     ['Ghost race', race],
   ].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  $('pop-compare').textContent = compareWithLastTry();
   pop.hidden = false;
 }
+
+function nextMissionLine() {
+  const li = $('missions').querySelector('li.now');
+  return li ? `Next mission: ${li.querySelector('b').textContent}.` : 'You finished every mission!';
+}
+
+// One line comparing this try with the try before it on the same robot and course.
+function compareWithLastTry() {
+  const i = state.history.findIndex((h) => h.sim === state.sim);
+  const cur = state.sim;
+  const same = (a, b) => ['seed', 'weakPct', 'weakSide', 'trips', 'bumps', 'noise', 'loopMs'].every((k) => a[k] === b[k]);
+  const prev = state.history.slice(i + 1).find((h) => h.watched && same(h.sim.cfg, cur.cfg));
+  if (!prev) return '';
+  const a = prev.sim.result, b = cur.result;
+  const ca = Math.round(a.driftCm), cb = Math.round(b.driftCm);
+  if (b.stars > a.stars) return `🎉 Better than last try: ${'★'.repeat(a.stars) || 'no stars'} → ${'★'.repeat(b.stars)}`;
+  if (b.stars < a.stars) return `Last try got more stars (${'★'.repeat(a.stars)}). What did you change?`;
+  if (cb < ca - 1) return `🎉 Closer to the path than last try: ${ca} cm → ${cb} cm`;
+  if (cb > ca + 1) return `Last try stayed closer (${ca} cm → ${cb} cm). What did you change?`;
+  return 'About the same as last try.';
+}
 function hidePop() { $('result-pop').hidden = true; }
-$('pop-close').addEventListener('click', hidePop);
+$('pop-close').addEventListener('click', () => {
+  hidePop();
+  const hint = `${$('pop-title').textContent} ${$('pop-text').textContent}`;
+  const hasF = /\bF\b/.test(hint), hasP = /\bP\b/.test(hint);
+  const which = hasF && !hasP ? ['f'] : hasP && !hasF ? ['p'] : ['f', 'p'];
+  const knobs = which.map((k) => document.querySelector(`.knob.${k}`));
+  knobs[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  for (const kn of knobs) { kn.classList.remove('look'); void kn.offsetWidth; kn.classList.add('look'); }
+});
 $('pop-replay').addEventListener('click', replay);
 
 // ---------- my tries
@@ -362,6 +400,7 @@ function showTab(tab) {
     if (!explainLoaded) explainLoaded = import('./explain.js').then((m) => m.initExplain());
     explainLoaded.then((ex) => ex && ex.resize());
   }
+  stopSpeaking();
   window.scrollTo(0, 0);
 }
 document.querySelector('.tabs').addEventListener('click', (e) => {
@@ -374,7 +413,7 @@ document.addEventListener('click', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.target.closest('input, select, textarea') || $('tab-sim').hidden) return;
+  if (e.target.closest('input, select, textarea, button, summary, a') || $('tab-sim').hidden) return;
   if (e.code === 'Space') { e.preventDefault(); $('btn-play').click(); }
   else if (e.key === 'r' || e.key === 'R') runSim(true);
 });
@@ -394,7 +433,7 @@ function updateHUD(f, gs) {
   const sim = state.sim, c = sim.cfg;
   const fwd = f.leg % 2 === 0;
   let phase = 'Ready', dot = '';
-  if (f.phase === 'drive') { phase = fwd ? 'Driving out →' : '← Driving back'; dot = 'run'; }
+  if (f.phase === 'drive') { phase = fwd ? 'Driving to the far line →' : '← Backing up to START'; dot = 'run'; }
   else if (f.phase === 'pause') { phase = 'Stopped at the line'; dot = 'pause'; }
   else if (f.phase === 'done') phase = 'Done!';
   if (state.t >= sim.duration) {
@@ -524,7 +563,36 @@ function onResize() { scene.resize(); charts.resize(); redraw(); }
 window.addEventListener('resize', onResize);
 new ResizeObserver(onResize).observe($('viewport'));
 
+// ---------- read to me: the current mission and the result card
+{
+  const mBtn = readButton(() => {
+    const li = $('missions').querySelector('li.now');
+    if (!li) return 'You finished every mission! Great tuning.';
+    return `Your mission: ${li.querySelector('b').textContent}. ${li.querySelector('span').textContent}`;
+  }, 'small');
+  $('missions').closest('.card').querySelector('.card-h').insertBefore(mBtn, $('mcount'));
+  const pBtn = readButton(() => [$('pop-title').textContent, $('pop-text').textContent, $('pop-compare').textContent].join('. '), 'small');
+  $('pop-actions').prepend(pBtn);
+}
+
+// ---------- teacher: a link that opens with these F and P (?F=47&P=5)
+$('btn-link').addEventListener('click', async () => {
+  const url = new URL(location.href);
+  url.hash = '';
+  url.search = `?F=${fPower(state.cfg)}&P=${Math.round(state.cfg.kp)}`;
+  try { await navigator.clipboard.writeText(url.href); $('btn-link').textContent = 'Link copied ✓'; }
+  catch { prompt('Copy this link:', url.href); }
+  setTimeout(() => { $('btn-link').textContent = 'Copy a link with this F and P'; }, 1800);
+});
+{
+  const F = parseInt(params.get('F'), 10), P = parseInt(params.get('P'), 10);
+  if (Number.isFinite(F)) state.cfg.kf = Math.max(0, Math.min(100, F)) / SPEED;
+  if (Number.isFinite(P)) state.cfg.kp = Math.max(0, Math.min(30, P));
+}
+
 // ---------- start: the robot drives back and forth, drifting
+const boot = $('boot');
+if (boot) boot.remove();
 writeUI();
 applyView();
 renderMissions();

@@ -35,11 +35,23 @@ export function createCharts(els, onSeek) {
       const t = (ev.clientX - r.left - pad.l) / (r.width - pad.l - pad.r) * tMax;
       onSeek(Math.max(0, Math.min(run.duration, t)));
     };
-    let down = false;
-    ch.el.addEventListener('pointerdown', (e) => { down = true; ch.el.setPointerCapture(e.pointerId); seek(e); });
-    ch.el.addEventListener('pointermove', (e) => { if (down) seek(e); });
-    ch.el.addEventListener('pointerup', () => { down = false; });
-    ch.el.addEventListener('pointercancel', () => { down = false; });
+    // Mouse: press and drag to scrub. Finger: a tap jumps there, a sideways drag
+    // scrubs, and an up/down swipe just scrolls the page (and changes nothing).
+    let down = null;
+    ch.el.addEventListener('pointerdown', (e) => {
+      down = { x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch', scrub: false };
+      if (!down.touch) { ch.el.setPointerCapture(e.pointerId); down.scrub = true; seek(e); }
+    });
+    ch.el.addEventListener('pointermove', (e) => {
+      if (!down) return;
+      if (!down.scrub && Math.abs(e.clientX - down.x) > 10 && Math.abs(e.clientX - down.x) > Math.abs(e.clientY - down.y)) down.scrub = true;
+      if (down.scrub) seek(e);
+    });
+    ch.el.addEventListener('pointerup', (e) => {
+      if (down && down.touch && !down.scrub && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8) seek(e);
+      down = null;
+    });
+    ch.el.addEventListener('pointercancel', () => { down = null; });
   }
 
   function resize() {

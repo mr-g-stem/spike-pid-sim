@@ -5,7 +5,7 @@
   --line: #d8e1ee;
   --text: #1c2740;
   --muted: #5d6b85;
-  --dim: #94a1b8;
+  --dim: #6f7c93;
   --f: #2f80ed;
   --f-soft: #e3efff;
   --p: #f2761d;
@@ -77,17 +77,17 @@ a { color: var(--f); }
 
 .kcards { left: 12px; bottom: 12px; display: flex; gap: 10px; }
 .kcard { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px 7px; width: 182px; box-shadow: var(--shadow); }
-.kc-h { display: block; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+.kc-h { display: block; font-size: 12.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
 .kcard b { display: block; font-size: 22px; font-weight: 900; line-height: 1.15; margin: 1px 0 5px; white-space: nowrap; }
 .kcard.good b { color: var(--good); } .kcard.warn b { color: var(--warn); } .kcard.bad b { color: var(--bad); }
 .lane, .race { position: relative; height: 16px; border-radius: 8px; background: #edf1f7; overflow: hidden; }
-.lane-zone { position: absolute; left: calc(50% - 10%); width: 20%; top: 0; bottom: 0; background: rgba(22, 163, 74, 0.22); }
+.lane-zone { position: absolute; left: calc(50% - 3.33%); width: 6.67%; top: 0; bottom: 0; background: rgba(22, 163, 74, 0.22); }
 .lane-mid { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: #2f6fdb; }
 .lane-dot { position: absolute; top: 2px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--text); left: 50%; transition: left 0.06s linear; }
 .race-line { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: #b8c4d6; }
 .race-ghost { position: absolute; left: 50%; top: 2px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: rgba(96, 165, 250, 0.5); border: 2px solid #60a5fa; }
 .race-you { position: absolute; top: 2px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #ffc928; border: 2px solid #1c2740; left: 50%; }
-.lane-words { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); font-weight: 800; margin-top: 1px; }
+.lane-words { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); font-weight: 800; margin-top: 1px; }
 
 .hud-br { right: 12px; bottom: 12px; background: rgba(255, 255, 255, 0.95); border: 1px solid var(--line); border-radius: 14px; padding: 7px 11px 8px; box-shadow: var(--shadow); }
 .motors-h { font-size: 12px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; text-align: center; }
@@ -350,3 +350,24 @@ pre.code { background: #141b2a; color: #dbe4ef; border-radius: var(--radius); pa
 .no3d { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 86%); background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; text-align: center; color: var(--muted); box-shadow: var(--shadow); }
 .no3d b { color: var(--text); }
 .ipad-note { background: var(--warn-soft); border: 1px solid #fcd34d; border-radius: 14px; padding: 10px 14px; margin: 12px 0; font-size: 14.5px; }
+/* shown until main.js starts; stays only if the app can't run */
+.boot { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--muted); width: min(380px, 86%); }
+.boot b { display: block; font-size: 20px; color: var(--text); margin-bottom: 6px; }
+.boot span { display: block; font-size: 14px; opacity: 0; animation: bootlate 0.01s 6s forwards; }
+@keyframes bootlate { to { opacity: 1; } }
+.read-btn { border: 1.5px solid #c7d7f0; background: #eef5ff; color: #1f5fbf; border-radius: 999px; padding: 4px 12px; font-weight: 900; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.read-btn.speaking { background: #1f5fbf; color: #fff; border-color: #1f5fbf; }
+.read-btn.small { padding: 3px 10px; font-size: 12.5px; }
+.card-h .read-btn { margin-left: auto; margin-right: 8px; }
+.how-text .read-btn { margin: 0 0 0 10px; vertical-align: middle; }
+.pop-compare { margin: -6px 0 14px !important; font-weight: 800; color: var(--text) !important; font-size: 15px !important; }
+.pop-compare:empty { display: none; }
+@media (pointer: coarse) { .read-btn { padding: 8px 14px; } .read-btn.small { padding: 7px 12px; } }
+.pop-actions { flex-wrap: wrap; }
+.robot-pick { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.robot-pick b { color: var(--text); }
+.robot-pick .row-btns { margin-top: 0; }
+/* "Change F or P": point at the knob the hint is about */
+.knob.look { animation: look 1.4s ease-out 2; }
+@keyframes look { 0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } 30% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.7); } }
+@media (prefers-reduced-motion: reduce) { .knob.look { animation: none; outline: 3px solid #f59e0b; } }

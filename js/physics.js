@@ -290,7 +290,8 @@ export function simulate(userCfg = {}) {
         stillSince = null;
       }
       const expected = cfg.distance / Math.max(cfg.speed, 1);
-      if (t - legStart > expected * 3 + 6) { endReason = 'tooSlow'; events.push({ t, type: 'tooSlow' }); break; }
+      // stop crawling runs early so nobody waits two minutes for a result
+      if (t - legStart > expected * 2 + 3) { endReason = 'tooSlow'; events.push({ t, type: 'tooSlow' }); break; }
     } else {
       stillSince = null;
     }
@@ -441,5 +442,5 @@ function coachHint(s) {
   if (s.driftCm >= 2 || Math.abs(s.lean) > 0.6) {
     return { tone: 'info', title: 'So close!', text: 'It almost stays on the path. Turn P up a little more.' };
   }
-  return { tone: 'good', title: 'You tuned it!', text: 'Right speed, straight path, no wiggles. Now try a mystery robot!' };
+  return { tone: 'good', title: 'You tuned it!', text: 'Right speed, straight path, no wiggles.' };
 }

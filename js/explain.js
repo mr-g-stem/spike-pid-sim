@@ -2,8 +2,9 @@
 // Every scene only animates while it is on screen.
 import * as THREE from '../vendor/three.module.min.js';
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildRobot, TOUCH } from './scene.js';
+import { buildRobot, TOUCH, whenNunito } from './scene.js';
 import { simulate, ghostSchedule, MM_PER_DEG } from './physics.js';
+import { readButton, readableText } from './speak.js';
 
 const FONT = '"Nunito", system-ui, sans-serif';
 const C = {
@@ -164,6 +165,11 @@ export function initExplain() {
     try { return make(); } catch (err) { console.warn('How it works scene failed:', err); return null; }
   });
   void scenes;
+  // a Read to me button on every section
+  document.querySelectorAll('#tab-how .how-text').forEach((box) => {
+    const h3 = box.querySelector('h3');
+    if (h3 && !box.querySelector('.read-btn')) h3.appendChild(readButton(() => readableText(box)));
+  });
   sizeAll();
   window.addEventListener('resize', sizeAll);
   requestAnimationFrame(loop);
@@ -221,6 +227,7 @@ function robot3D() {
     labelBox.appendChild(el);
     return { el, p, w: 0 };
   });
+  whenNunito(() => tags.forEach((tg) => { tg.w = 0; })); // label widths change when the font arrives
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'ex-lines');
   labelBox.prepend(svg);
@@ -415,6 +422,12 @@ function gyroScene() {
   el.addEventListener('pointermove', (e) => { if (dragging) target = toH(e); });
   const up = () => { dragging = false; lastTouch = s.t; };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  // tap buttons too: on an iPad a circular drag can turn into a page scroll
+  document.querySelectorAll('#ex-gyro-btns button').forEach((b) => b.addEventListener('click', () => {
+    const d = Number(b.dataset.turn);
+    target = d === 0 ? 0 : Math.max(-90, Math.min(90, Math.round(target / 15) * 15 + d));
+    lastTouch = s.t + 2;
+  }));
   return s;
 }
 
@@ -503,7 +516,8 @@ function pScene() {
 
 // ---------- 6. How much P? Four robots side by side
 function lanesScene() {
-  const base = { kf: 0.235, trips: 1, bumps: true, noise: false, weakSide: 'left', weakPct: 2.5, seed: 11 };
+  // a weaker motor than the class robot, so the difference between P = 1 and P = 5 shows
+  const base = { kf: 0.235, trips: 1, bumps: true, noise: false, weakSide: 'left', weakPct: 6, seed: 11 };
   const STRETCH = 1.5; // sideways moves drawn 1.5x bigger
   const rows = [
     { P: 0, name: 'P = 0', say: 'Never steers back', col: C.bad },

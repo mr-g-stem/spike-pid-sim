@@ -64,6 +64,17 @@ function canvasTex(w, h, draw, renderer) {
   return t;
 }
 
+// Empty a group and free its GPU memory (geometries, materials, textures).
+// Without this every run leaked a few hundred KB, which adds up on an iPad.
+function emptyGroup(group) {
+  group.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+    for (const m of mats) { if (m.map) m.map.dispose(); m.dispose(); }
+  });
+  group.clear();
+}
+
 // ---------- 5x5 light matrix patterns (row 0 = front of the robot)
 const ICONS = {
   up:    ['..#..', '.###.', '#.#.#', '..#..', '..#..'],
@@ -77,6 +88,15 @@ const ICONS = {
 // =====================================================================
 // Touch devices (iPads) get a lighter render: fewer pixels and a smaller shadow map.
 export const TOUCH = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
+// Calls back once the rounded "Nunito" font is ready, or never if it is blocked.
+export function whenNunito(cb) {
+  if (!document.fonts || !document.fonts.load) return;
+  const go = () => document.fonts.load('900 40px Nunito').then((faces) => { if (faces && faces.length) cb(); }).catch(() => {});
+  const link = document.querySelector('link[href*="fonts.googleapis"]');
+  if (link && link.media !== 'all' && link.media !== '') link.addEventListener('load', () => setTimeout(go, 0));
+  else go();
+}
 
 export function createScene(container, labelLayer) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -104,6 +124,9 @@ export function createScene(container, labelLayer) {
   renderer.domElement.style.touchAction = 'pan-y';
   let dirty = true; // redraw only when something changed (saves iPad battery)
   controls.addEventListener('change', () => { dirty = true; });
+  // iPads can drop the 3D drawing when you switch apps; draw again when it comes back
+  renderer.domElement.addEventListener('webglcontextrestored', () => { dirty = true; });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) dirty = true; });
 
   // ---------- lights
   scene.add(new THREE.HemisphereLight(0xeaf1ff, 0x2a2f38, 1.25));
@@ -138,7 +161,7 @@ export function createScene(container, labelLayer) {
   function buildCourse(dist) {
     distance = dist;
     MAT.xMin = -600; MAT.xMax = dist + 600;
-    world.clear();
+    emptyGroup(world);
     const L = MAT.xMax - MAT.xMin, W = MAT.yMax - MAT.yMin;
     const cx = (MAT.xMin + MAT.xMax) / 2;
 
@@ -207,7 +230,7 @@ export function createScene(container, labelLayer) {
         g.fillText(label, X(x), Y(455));
       };
       tape(0, 'START');
-      tape(dist, 'TURN AROUND');
+      tape(dist, 'FAR LINE');
       // big friendly direction arrows
       g.fillStyle = '#cfd5dd'; g.font = `900 ${90 * s}px ${FONT}`; g.textAlign = 'center';
       g.fillText('→', X(dist * 0.3), Y(-150));
@@ -226,7 +249,7 @@ export function createScene(container, labelLayer) {
   hazardTex.wrapS = THREE.RepeatWrapping;
 
   function setBumps(bumps) {
-    bumpGroup.clear();
+    emptyGroup(bumpGroup);
     bumpMeshes.forEach((b) => removeLabel(b.label));
     bumpMeshes = [];
     for (const b of bumps) {
@@ -386,7 +409,7 @@ export function createScene(container, labelLayer) {
     run = sim;
     if (sim.cfg.distance !== distance) buildCourse(sim.cfg.distance);
     setBumps(sim.bumps);
-    trailGroup.clear();
+    emptyGroup(trailGroup);
     // previous runs, faded
     ghostTrails = previous.slice(0, 3).map((p, i) => {
       const pts = p.frames.map(f => [f.x, f.y]);
@@ -404,7 +427,7 @@ export function createScene(container, labelLayer) {
     wheelTrails = [ribbon(lp, 12, 0x2b2e34, 0.16, 1.1), ribbon(rp, 12, 0x2b2e34, 0.16, 1.1)];
     trailGroup.add(...wheelTrails);
     // stop markers
-    markerGroup.clear();
+    emptyGroup(markerGroup);
     stopLabels.forEach((s) => removeLabel(s.L));
     stopLabels = sim.result.stops.map(s => {
       const pin = new THREE.Group();
@@ -488,7 +511,7 @@ export function createScene(container, labelLayer) {
 
     // drift line
     const dy = frame.y;
-    const showDrift = Math.abs(dy) > 4;
+    const showDrift = Math.abs(dy) >= 5;
     driftLine.visible = driftCapA.visible = driftCapB.visible = showDrift;
     dLabel.visible = showDrift && opts.labels;
     if (showDrift) {
@@ -584,7 +607,7 @@ export function createScene(container, labelLayer) {
 
   buildCourse(1500);
   // redraw the mat once the rounded font has loaded
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { buildCourse(distance); dirty = true; });
+  whenNunito(() => { buildCourse(distance); dirty = true; });
   resize();
   setCamera('follow', null);
 
