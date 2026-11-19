@@ -85,8 +85,8 @@ export function createScene(container, labelLayer) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0d1320);
-  scene.fog = new THREE.Fog(0x0d1320, 7000, 16000);
+  scene.background = new THREE.Color(0xdce8f5);
+  scene.fog = new THREE.Fog(0xdce8f5, 5000, 14000);
 
   const camera = new THREE.PerspectiveCamera(38, 1, 5, 30000);
   camera.position.set(-500, 650, 1150);
@@ -144,8 +144,8 @@ export function createScene(container, labelLayer) {
     }
     // floor
     const floorTex = canvasTex(512, 512, (g, w, h) => {
-      g.fillStyle = '#151b26'; g.fillRect(0, 0, w, h);
-      g.strokeStyle = '#1d2533'; g.lineWidth = 3;
+      g.fillStyle = '#c9d4e2'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#bcc8d8'; g.lineWidth = 3;
       for (let i = 0; i <= w; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
     }, renderer);
     floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
@@ -176,87 +176,34 @@ export function createScene(container, labelLayer) {
     return canvasTex(cw, ch, (g) => {
       g.fillStyle = '#f4f2ec'; g.fillRect(0, 0, cw, ch);
       // grid
-      for (let x = Math.ceil(MAT.xMin / 50) * 50; x <= MAT.xMax; x += 50) {
-        g.strokeStyle = x % 100 === 0 ? '#d9d4c9' : '#e8e4dc'; g.lineWidth = x % 100 === 0 ? 1.6 : 1;
+      g.strokeStyle = '#e4e0d7'; g.lineWidth = 1.4;
+      for (let x = Math.ceil(MAT.xMin / 100) * 100; x <= MAT.xMax; x += 100) {
         g.beginPath(); g.moveTo(X(x), 0); g.lineTo(X(x), ch); g.stroke();
       }
-      for (let y = Math.ceil(MAT.yMin / 50) * 50; y <= MAT.yMax; y += 50) {
-        g.strokeStyle = y % 100 === 0 ? '#d9d4c9' : '#e8e4dc'; g.lineWidth = y % 100 === 0 ? 1.6 : 1;
+      for (let y = Math.ceil(MAT.yMin / 100) * 100; y <= MAT.yMax; y += 100) {
         g.beginPath(); g.moveTo(0, Y(y)); g.lineTo(cw, Y(y)); g.stroke();
       }
-      // zones: green ±2 cm, amber ±5 cm
-      g.fillStyle = 'rgba(251,191,36,0.16)';
-      g.fillRect(X(0), Y(50), X(dist) - X(0), Y(-50) - Y(50));
-      g.fillStyle = 'rgba(52,211,153,0.22)';
+      // on-track zone (±2 cm) and the path the robot should follow
+      g.fillStyle = 'rgba(52,211,153,0.24)';
       g.fillRect(X(0), Y(20), X(dist) - X(0), Y(-20) - Y(20));
-      // perfect path (dashed)
-      g.strokeStyle = '#2f6fdb'; g.lineWidth = 4 * s; g.setLineDash([40 * s, 26 * s]);
+      g.strokeStyle = '#2f6fdb'; g.lineWidth = 5 * s; g.setLineDash([40 * s, 26 * s]);
       g.beginPath(); g.moveTo(X(-150), Y(0)); g.lineTo(X(dist + 150), Y(0)); g.stroke();
       g.setLineDash([]);
-      g.fillStyle = '#2f6fdb'; g.font = `600 ${22 * s}px system-ui, sans-serif`; g.textAlign = 'left';
-      g.fillText('perfect path', X(110), Y(-14));
-      g.fillStyle = 'rgba(21,128,61,0.85)'; g.font = `600 ${15 * s}px system-ui, sans-serif`;
-      g.fillText('green: within 2 cm', X(dist * 0.5 - 70), Y(-36));
-      g.fillStyle = 'rgba(161,98,7,0.85)';
-      g.fillText('amber: within 5 cm', X(dist * 0.5 - 70), Y(-66));
 
       // tape lines
-      const tape = (x, label, sub) => {
+      const FONT = '"Nunito", system-ui, sans-serif';
+      const tape = (x, label) => {
         g.fillStyle = '#15171b';
         g.fillRect(X(x) - 12.5 * s, Y(420), 25 * s, Y(-420) - Y(420));
-        g.fillStyle = '#15171b'; g.font = `800 ${46 * s}px system-ui, sans-serif`; g.textAlign = 'center';
-        g.fillText(label, X(x), Y(450));
-        g.fillStyle = '#5b6170'; g.font = `600 ${22 * s}px system-ui, sans-serif`;
-        g.fillText(sub, X(x), Y(450) + 30 * s);
+        g.font = `900 ${54 * s}px ${FONT}`; g.textAlign = 'center';
+        g.fillText(label, X(x), Y(455));
       };
-      tape(0, 'LINE A', 'start');
-      tape(dist, 'LINE B', 'turn back');
-
-      // side rulers at each line: how far off centre did it stop?
-      const sideRuler = (x, dir) => {
-        const rx = x + dir * 40;
-        g.strokeStyle = '#3b3f47'; g.fillStyle = '#3b3f47';
-        g.lineWidth = 1.5;
-        g.beginPath(); g.moveTo(X(rx), Y(300)); g.lineTo(X(rx), Y(-300)); g.stroke();
-        for (let y = -300; y <= 300; y += 10) {
-          const big = y % 50 === 0;
-          const len = (big ? 22 : 11) * s;
-          g.beginPath(); g.moveTo(X(rx), Y(y)); g.lineTo(X(rx) + dir * len, Y(y)); g.stroke();
-          if (big) {
-            g.font = `700 ${16 * s}px system-ui, sans-serif`; g.textAlign = dir > 0 ? 'left' : 'right';
-            const t = y === 0 ? '0' : `${Math.abs(y / 10)}${y > 0 ? 'L' : 'R'}`;
-            g.fillText(t, X(rx) + dir * (len + 4 * s), Y(y) + 5 * s);
-          }
-        }
-        g.font = `600 ${14 * s}px system-ui, sans-serif`; g.textAlign = 'center';
-        g.fillText('cm off', X(rx) + dir * 26 * s, Y(330));
-      };
-      sideRuler(0, -1);
-      sideRuler(dist, 1);
-
-      // distance ruler along the near edge
-      const ry = -560;
-      g.strokeStyle = '#3b3f47'; g.fillStyle = '#3b3f47'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(X(0), Y(ry)); g.lineTo(X(dist), Y(ry)); g.stroke();
-      for (let x = 0; x <= dist; x += 50) {
-        const big = x % 100 === 0;
-        g.beginPath(); g.moveTo(X(x), Y(ry)); g.lineTo(X(x), Y(ry) - (big ? 22 : 11) * s); g.stroke();
-        if (big) {
-          g.font = `700 ${20 * s}px system-ui, sans-serif`; g.textAlign = 'center';
-          g.fillText(`${x / 10}${x === dist ? ' cm' : ''}`, X(x), Y(ry) + 28 * s);
-        }
-      }
-      // direction arrow + title
-      g.fillStyle = '#9aa3b2'; g.font = `800 ${30 * s}px system-ui, sans-serif`; g.textAlign = 'left';
-      g.fillText('PID DRIVE LAB', X(MAT.xMin + 40), Y(MAT.yMax - 70));
-      g.font = `600 ${18 * s}px system-ui, sans-serif`;
-      g.fillText('SPIKE Prime · Pybricks · F + P', X(MAT.xMin + 40), Y(MAT.yMax - 104));
-      g.fillStyle = '#c4cad3'; g.font = `800 ${60 * s}px system-ui, sans-serif`; g.textAlign = 'center';
-      g.fillText('→', X(dist * 0.25), Y(-130));
-      g.fillText('←', X(dist * 0.75), Y(-130));
-      g.font = `600 ${16 * s}px system-ui, sans-serif`;
-      g.fillText('out', X(dist * 0.25), Y(-170));
-      g.fillText('back', X(dist * 0.75), Y(-170));
+      tape(0, 'START');
+      tape(dist, 'TURN AROUND');
+      // big friendly direction arrows
+      g.fillStyle = '#cfd5dd'; g.font = `900 ${90 * s}px ${FONT}`; g.textAlign = 'center';
+      g.fillText('→', X(dist * 0.3), Y(-150));
+      g.fillText('←', X(dist * 0.7), Y(-150));
       // edge band
       g.strokeStyle = '#2b3240'; g.lineWidth = 10 * s; g.strokeRect(0, 0, cw, ch);
     }, renderer);
@@ -286,6 +233,7 @@ export function createScene(container, labelLayer) {
       bm.castShadow = true; bm.receiveShadow = true;
       bumpGroup.add(bm);
       bumpMeshes.push({ mesh: bm, bump: b, label: addLabel('bump', 'lbl lbl-bump', toV3(b.x, yc, 10)) });
+      bumpMeshes[bumpMeshes.length - 1].label.visible = false;
     }
   }
 
@@ -405,7 +353,7 @@ export function createScene(container, labelLayer) {
   }
   const hLabel = addLabel('', 'lbl lbl-heading', new THREE.Vector3());
   const dLabel = addLabel('', 'lbl lbl-drift', new THREE.Vector3());
-  const gLabel = addLabel('perfect robot', 'lbl lbl-ghost', new THREE.Vector3());
+  const gLabel = addLabel('ghost', 'lbl lbl-ghost', new THREE.Vector3());
   const tLabel = addLabel('straight ahead', 'lbl lbl-target', new THREE.Vector3());
   let stopLabels = [];
 
@@ -423,7 +371,8 @@ export function createScene(container, labelLayer) {
 
   // ---------- run management
   let run = null;
-  const opts = { ghost: true, laser: true, trails: true, labels: true };
+  // angles = the extra degree labels, wedge and "straight ahead" line (teacher view)
+  const opts = { ghost: true, laser: true, trails: true, labels: true, angles: false };
 
   function setRun(sim, previous = []) {
     run = sim;
@@ -462,8 +411,7 @@ export function createScene(container, labelLayer) {
       pin.position.copy(toV3(f.x + off, f.y));
       pin.visible = false;
       markerGroup.add(pin);
-      const side = s.y > 0 ? 'left' : 'right';
-      const L = addLabel(`${(Math.abs(s.y) / 10).toFixed(1)} cm ${Math.abs(s.y) < 2 ? '' : side}`, 'lbl lbl-stop', toV3(f.x + off, f.y, 105));
+      const L = addLabel(`${Math.round(Math.abs(s.y) / 10)} cm off`, 'lbl lbl-stop', toV3(f.x + off, f.y, 105));
       L.visible = false;
       return { pin, L, t: s.t + 0.35 };
     });
@@ -507,8 +455,8 @@ export function createScene(container, labelLayer) {
 
     // laser / target / wedge
     laser.visible = opts.laser;
-    targetLine.visible = opts.laser;
-    wedge.visible = opts.laser;
+    targetLine.visible = opts.angles;
+    wedge.visible = opts.angles;
     const front = 45;
     targetLine.position.set(frame.x + front + LASER / 2, 1.9, -frame.y);
     const pos = wedgeGeo.attributes.position;
@@ -522,12 +470,12 @@ export function createScene(container, labelLayer) {
     pos.needsUpdate = true;
 
     const hdg = frame.heading;
-    hLabel.visible = opts.laser && opts.labels;
+    hLabel.visible = opts.angles && opts.labels;
     const endX = frame.x + Math.cos(th) * (front + LASER * 0.62), endY = frame.y + Math.sin(th) * (front + LASER * 0.62);
     hLabel.pos.set(endX, 12, -endY);
     const dir = Math.abs(hdg) < 0.05 ? 'straight' : hdg > 0 ? 'turned right' : 'turned left';
     hLabel.el.innerHTML = `<b>${hdg >= 0 ? '+' : '−'}${Math.abs(hdg).toFixed(1)}°</b> ${dir}`;
-    tLabel.visible = opts.laser && opts.labels;
+    tLabel.visible = opts.angles && opts.labels;
     tLabel.pos.set(frame.x + front + LASER * 0.95, 8, -frame.y);
 
     // drift line
@@ -541,7 +489,7 @@ export function createScene(container, labelLayer) {
       driftCapA.position.set(frame.x, 2.6, 0);
       driftCapB.position.set(frame.x, 2.6, -dy);
       dLabel.pos.set(frame.x, 6, -dy / 2);
-      dLabel.el.innerHTML = `<b>${(Math.abs(dy) / 10).toFixed(1)} cm</b> ${dy > 0 ? 'left' : 'right'} of the path`;
+      dLabel.el.innerHTML = `<b>${Math.round(Math.abs(dy) / 10)} cm</b> off`;
     }
 
     // ghost
@@ -557,7 +505,7 @@ export function createScene(container, labelLayer) {
     for (const b of bumpMeshes) {
       const hit = run.events.find(e => e.type === 'bump' && run.bumps[e.i] === b.bump && t >= e.t && t < e.t + 0.45);
       b.mesh.material.emissiveIntensity = hit ? 0.9 : 0;
-      b.label.visible = opts.labels;
+      b.label.visible = opts.angles && opts.labels;
     }
     // stop flags
     for (const s of stopLabels) {
@@ -618,6 +566,8 @@ export function createScene(container, labelLayer) {
   }
 
   buildCourse(1500);
+  // redraw the mat once the rounded font has loaded
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => buildCourse(distance));
   resize();
   setCamera('follow', null);
 
@@ -626,7 +576,7 @@ export function createScene(container, labelLayer) {
 
 // =====================================================================
 // The SPIKE-style driving base. Origin = centre of the wheel axle on the mat.
-function buildRobot(renderer) {
+export function buildRobot(renderer) {
   const group = new THREE.Group();
   const white = std(COL.white, { roughness: 0.42 });
   const grey = std(COL.grey, { roughness: 0.5 });

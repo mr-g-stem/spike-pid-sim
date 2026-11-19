@@ -28,7 +28,7 @@ run('F too high 0.32', { kf: 0.32, kp: 3 });
 const p05 = run('P=0.5', { kf: 0.235, kp: 0.5 });
 const p1 = run('P=1', { kf: 0.235, kp: 1 });
 const p3 = run('P=3', { kf: 0.235, kp: 3 });
-run('P=6', { kf: 0.235, kp: 6 });
+const p6 = run('P=6', { kf: 0.235, kp: 6 });
 const p12 = run('P=12', { kf: 0.235, kp: 12 });
 const p25 = run('P=25', { kf: 0.235, kp: 25 });
 run('split F, P=1', { kp: 1, splitF: true, kfL: 0.241, kfR: 0.235 });
@@ -55,11 +55,12 @@ console.log('all checks pass');
 
 // coach says the right thing for each classroom moment
 const coachChecks = [
-  [start, 'Start with F'],
-  [fOnly, 'Now it drifts'],
-  [p12, 'shaking'],
-  [p25, 'shook'],
+  [start, 'F up'],
+  [fOnly, 'drifts'],
+  [p12, 'wiggl'],
+  [p25, 'wiggle'],
 ];
+coachChecks.push([p6, 'tuned']);
 let cfail = 0;
 for (const [s, want] of coachChecks) {
   const ok = s.result.coach.title.includes(want);

@@ -109,6 +109,8 @@ export function ghostSchedule(cfg) {
   return {
     total,
     legT,
+    // distance along a leg, s seconds after that leg started (stops at the line)
+    inLeg(s) { return s <= 0 ? 0 : s >= legT ? D : posInLeg(s); },
     at(t) {
       if (t >= total) return { x: 0, moving: false, leg: legs - 1 };
       const leg = Math.floor(t / period);
@@ -401,43 +403,42 @@ export function frameIndexAt(frames, t) {
   return lo;
 }
 
+// Coach hints are written for grades 3-5: short sentences, one thing to change.
 function coachHint(s) {
   const { cfg, endReason } = s;
+  const cm = Math.round(s.driftCm);
   if (endReason === 'stuck') {
-    return { tone: 'bad', title: 'The robot never got going', text: `F × speed = ${(cfg.kf * cfg.speed).toFixed(0)}% power, which is not enough to get the wheels turning. Real motors need a little power just to start. Raise F.` };
+    return { tone: 'bad', title: 'Not enough go power!', text: 'The wheels did not even turn. Motors need some power just to get started. Turn F up.' };
   }
   if (endReason === 'tooSlow') {
-    if (s.wobble > 4) return { tone: 'bad', title: 'It shook instead of driving', text: `P is so big that every correction overshoots, and the motors spend their power swinging left and right (about ±${s.wobble.toFixed(0)}°). Cut P way down.` };
-    return { tone: 'bad', title: 'Too slow to reach the line', text: 'The robot was crawling. Raise F so the motors get more power for the speed you asked for.' };
+    if (s.wobble > 4) return { tone: 'bad', title: 'Too much wiggle!', text: 'P is so big that the robot shakes back and forth instead of driving. Turn P way down.' };
+    return { tone: 'bad', title: 'Too slow!', text: 'Your robot crawled and never reached the line. Turn F up.' };
   }
   if (endReason === 'offTable') {
-    if (s.wobble > 4) return { tone: 'bad', title: 'It shook itself off the table', text: 'P is so big that every correction overshoots, and each swing is bigger than the last. Cut P way down.' };
-    return { tone: 'bad', title: 'It drove off the table', text: cfg.kp === 0 ? 'P is 0, so the gyro is ignored: nothing steers the robot back when it starts to turn. Add some P.' : 'The drift grew too big. Raise P so it steers back harder.' };
+    if (s.wobble > 4) return { tone: 'bad', title: 'It wiggled off the table!', text: 'P is so big that every wiggle gets bigger. Turn P way down.' };
+    return { tone: 'bad', title: 'It drove off the table!', text: cfg.kp === 0 ? 'P is 0, so the robot never steers back. Turn P up.' : 'It drifted too far. Turn P up so it steers back harder.' };
   }
-  // big shaking wastes power and slows the robot down, so blame P before F
-  if (s.wobble > 3) {
-    return { tone: 'warn', title: 'It is shaking: P is too big', text: `It swings about ±${s.wobble.toFixed(1)}° back and forth (${s.wiggles} swings). Each correction overshoots, so it has to correct the other way${s.speedErrPct < -8 ? ', and all that swinging slows it down' : ''}. Lower P.` };
+  // big wiggles waste power and slow the robot down, so fix P before F
+  if (s.wobble > 2.5) {
+    return { tone: 'warn', title: 'Too much P: it wiggles!', text: 'It steers back so hard that it goes past straight, then has to steer back the other way. Turn P down.' };
   }
-  if (s.speedErrPct < -12) {
-    return { tone: 'warn', title: 'Start with F: it is driving too slow', text: `It averaged ${s.avgSpeed.toFixed(0)} mm/s but you asked for ${cfg.speed}. Raise F a little and run again. Tune F first, then P.` };
+  if (s.speedErrPct < -6) {
+    return { tone: 'warn', title: 'Turn F up first', text: 'Your robot is slower than the ghost. Turn F up a little and try again.' };
   }
-  if (s.speedErrPct > 12) {
-    return { tone: 'warn', title: 'F is too high: it is driving too fast', text: `It averaged ${s.avgSpeed.toFixed(0)} mm/s but you asked for ${cfg.speed}. Lower F a little.` };
+  if (s.speedErrPct > 6) {
+    return { tone: 'warn', title: 'Turn F down', text: 'Your robot zoomed ahead of the ghost. Turn F down a little.' };
   }
   if (cfg.kp === 0 && s.driftCm > 2) {
-    return { tone: 'warn', title: 'The speed is good. Now it drifts.', text: `It went ${s.driftCm.toFixed(1)} cm off the line. The gyro can see the turn, but P is 0, so nothing steers back. Add some P.` };
+    return { tone: 'warn', title: 'Great speed! But it drifts.', text: `It went ${cm} cm off the path. P is 0, so the robot never steers back. Turn P up.` };
   }
   if (s.wobble > 1.5) {
-    return { tone: 'warn', title: 'It is shaking: P is too big', text: `It swings about ±${s.wobble.toFixed(1)}° back and forth (${s.wiggles} swings). Each correction overshoots, so it has to correct the other way. Lower P.` };
+    return { tone: 'info', title: 'A little wiggly', text: 'P is a bit too big, so the robot wiggles. Turn P down a little.' };
   }
   if (s.driftCm > 4) {
-    return { tone: 'warn', title: 'Still drifting', text: `It went ${s.driftCm.toFixed(1)} cm off the line. Raise P so it steers back harder.` };
+    return { tone: 'warn', title: 'Still drifting', text: `It went ${cm} cm off the path. Turn P up so it steers back harder.` };
   }
-  if (Math.abs(s.lean) > 0.6) {
-    return { tone: 'info', title: 'Straight, but leaning', text: `It holds a small angle (about ${Math.abs(s.lean).toFixed(1)}°) because P has to keep pushing against the weaker motor. Raise P a bit, or turn on separate F for each motor.` };
+  if (s.driftCm >= 2 || Math.abs(s.lean) > 0.6) {
+    return { tone: 'info', title: 'So close!', text: 'It almost stays on the path. Turn P up a little more.' };
   }
-  if (Math.abs(s.speedErrPct) > 6) {
-    return { tone: 'info', title: 'Nearly there', text: `Straight driving. The speed is ${Math.abs(s.speedErrPct).toFixed(0)}% ${s.speedErrPct < 0 ? 'slow' : 'fast'}: nudge F.` };
-  }
-  return { tone: 'good', title: 'Tuned!', text: 'Right speed, straight line, no snaking. Try Mystery robot: a new robot with its own weak motor.' };
+  return { tone: 'good', title: 'You tuned it!', text: 'Right speed, straight path, no wiggles. Now try a mystery robot!' };
 }

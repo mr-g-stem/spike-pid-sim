@@ -1,39 +1,65 @@
 # PID Drive Lab
 
-A browser simulator for tuning **F (feedforward)** and **P (proportional)** on a SPIKE Prime driving base running **Pybricks**.
+A browser simulator for grades 3–5. Students teach a SPIKE Prime robot running **Pybricks** to drive straight by tuning two numbers:
 
-The robot drives back and forth between two tape lines. One motor is a little weaker, so with P = 0 it drifts off the path. Students tune F first, so the robot drives at the speed they asked for. Then they tune P, so the gyro steers it back. I and D are shown but locked at 0.
+- **F, go power**: how hard both wheels push forward (0–100).
+- **P, steer-back power**: how hard the robot turns back when the gyro says it is off course (0–30).
 
-Runs in any modern browser, Chromebooks included. There is no build step: GitHub Pages serves the files as they are.
+The robot drives back and forth between two tape lines. One motor is a little weaker, so with P = 0 it drifts off the path. Students tune F first, until the robot keeps up with the see-through ghost robot. Then they tune P, until it stays on the path. I and D are shown as locked.
 
-## What students see
+It runs in any modern browser, Chromebooks included. There is no build step: GitHub Pages serves the files as they are.
 
-- **A 3D robot**: hub with a light matrix and port letters, motors, spinning wheels, caster, cables. It drives on a mat with distance rulers, cm-off rulers at each line, green (±2 cm) and amber (±5 cm) zones, and bumps.
-- **Heading laser** (orange) vs **straight ahead** (green dashes), with the heading error drawn as a wedge between them.
-- **Red drift line** from the perfect path to the robot, labelled in cm.
-- **See-through perfect robot** driving at exactly the target speed. If yours falls behind, F is too low.
-- **Curved arrow on the hub**: which way P is steering, and how hard.
-- **Inside the program, right now**: the loop's lines with live numbers (`base = F × SPEED`, `corr = P × error`, `left.dc(...)`).
-- **Motor bars**: each wheel's power split into its F part and its P part.
-- **Graphs**: heading, speed vs target, motor power, with the last run faded behind. Click a graph to jump to that moment.
-- **Result card**: 0–3 stars, plus one coaching hint after each run (F first, then P).
-- **Run log**: every run's F, P, distance off the path, wobble and speed. Click a run to watch it again.
-- **Pybricks code** tab: the matching program, ready to paste into code.pybricks.com.
+## Drive tab (what students use)
 
-Camera views: Follow, Behind, Top, Side (drag to orbit, scroll to zoom). Keys: space = play/pause, R = run.
+- **3D robot** on a mat with START and TURN AROUND lines, a blue path, a green on-track zone and yellow bumps. You can watch from three views: Follow, From above, Behind.
+- **Ghost robot** that drives at the perfect speed. It restarts with your robot at every line, so "keep up with the ghost" means F is right.
+- **Two cards:** "Off the path" (cm, plus a left/right lane dot) and "Ghost race" (keeping up / behind / ahead).
+- **Heading laser and trail**, a red "cm off" line, and flags where the robot stopped.
+- **One graph:** how far off the path, over time. Click the graph to jump to that moment.
+- **Big F and P sliders** with − and + buttons. Letting go of a slider runs the robot again.
+- **Missions:** watch it drift → keep up with the ghost → drive straight (★★★) → make it wiggle → tame a mystery robot. They are saved in the browser.
+- **Result card** with 0–3 stars and one hint in kid language (for example "Turn F up first" or "Too much P: it wiggles!"), plus confetti.
+- **My tries:** every run's F, P, cm off and stars. Tap a run to watch it again.
 
-Teacher mode: add `?unlock` to the URL to unlock the I and D sliders.
+**Teacher settings** (a closed box at the bottom of the panel):
+
+- live code panel;
+- wheel power bars split into F and P parts;
+- angle labels;
+- extra graphs (heading, speed, power);
+- trips, loop time, bumps, gyro noise;
+- a separate F for each wheel;
+- unlock I and D (or add `?unlock` to the URL);
+- skip to the end, reveal the mystery robot, reset missions.
+
+## How it works tab
+
+Nine illustrated steps, each with an animation:
+
+1. A 3D robot you can spin, with labelled hub, gyro, motors, wheels and caster.
+2. Why it drifts: one wheel slower, with a toggle to make both motors equal.
+3. F race: a slider against the ghost.
+4. The gyro dial: drag the robot and read + for right, − for left.
+5. P's times problem (off × P = steer), with the left and right wheel power bars and a "Bump it!" button.
+6. Four robots with P = 0, 1, 5 and 16, side by side.
+7. The 4-step loop, 100 times a second.
+8. The tuning recipe.
+9. Why I and D are locked.
+
+## Code tab
+
+The matching Pybricks program, which uses `F` as go power and `steer = P * error`. Paste it into code.pybricks.com. The left motor is on port A (`Direction.COUNTERCLOCKWISE`) and the right motor is on port B.
 
 ## The model
 
-- **Wheels:** 56 mm. **Axle track:** 112 mm. These are the same values as Pybricks' DriveBase example.
-- **Motors:** about 950°/s at 100% power with the robot's weight on them. They need 6% power before they start turning, and they reach a new speed with a 0.25 s lag.
-- **Weaker motor:** the class robot's left motor is 2% weaker. **Mystery robot** picks a random side and amount.
+- **Wheels:** 56 mm. **Axle track:** 112 mm. These are Pybricks' DriveBase example values.
+- **Motors:** about 950°/s at 100% power. They need 6% power before they start turning, and they reach a new speed with a 0.25 s lag.
+- **Weaker motor:** the class robot's left motor is 2% weaker. A mystery robot gets a random side and amount.
 - **Gyro:** Pybricks heading, where clockwise is positive. It has small noise and a 15 ms delay.
 - **Control loop:** runs every `wait(10)`, just like the generated program.
 - **Bumps:** fixed positions on the mat, so runs can be compared fairly.
 
-The sim gets the shape of the behaviour right: drift with P = 0, shaking when P is too big, crawling when F is too low. The exact numbers will differ on a real robot. Tune the real robot the same way: F first, then P.
+With the class robot, F ≈ 47 matches the ghost. P ≈ 5 drives straight. P ≈ 12 or more wiggles. P ≈ 25 shakes so hard it barely moves. A real robot will need its own numbers: tune it the same way, F first, then P.
 
 ## Run it locally
 
@@ -41,7 +67,7 @@ The sim gets the shape of the behaviour right: drift with P = 0, shaking when P 
 node tools/serve.mjs 8796
 ```
 
-Then open http://localhost:8796. Physics checks:
+Then open http://localhost:8796 (add `#how` to open the How it works tab). Physics checks:
 
 ```bash
 node tests/physics.test.mjs
@@ -51,12 +77,13 @@ node tests/physics.test.mjs
 
 | Path | What |
 |---|---|
-| `index.html`, `css/style.css` | the page |
-| `js/physics.js` | robot, motors, gyro, the F + P loop, scoring and coach hints |
+| `index.html`, `css/style.css` | the page (Nunito from Google Fonts, falls back to the system font) |
+| `js/physics.js` | robot, motors, gyro, the F + P loop, scoring and kid hints |
 | `js/scene.js` | three.js mat, robot model, trails, laser, labels, cameras |
-| `js/charts.js` | the three graphs |
+| `js/charts.js` | graphs |
+| `js/explain.js` | the animated How it works page |
 | `js/codegen.js` | Pybricks program generator |
-| `js/main.js` | sliders, playback, HUD, run log |
+| `js/main.js` | sliders, missions, playback, cards, teacher settings |
 | `vendor/` | three.js r160 (MIT, see `vendor/three-LICENSE.txt`) |
 
 SPIKE™ and LEGO® are trademarks of the LEGO Group, which does not sponsor or endorse this project. Pybricks is an independent open-source project.
