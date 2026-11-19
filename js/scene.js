@@ -1,8 +1,8 @@
 // scene.js: the 3D table, mat, SPIKE-style driving base, trails and overlays.
 // Sim coordinates (mm): x down the lane, y to the robot's left.
 // Three.js: X = sim x, Y = up, Z = -sim y. Robot faces +X when th = 0.
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as THREE from '../vendor/three.module.min.js';
+import { OrbitControls } from '../vendor/OrbitControls.js';
 import { ROBOT } from './physics.js';
 
 const COL = {
@@ -75,9 +75,12 @@ const ICONS = {
 };
 
 // =====================================================================
+// Touch devices (iPads) get a lighter render: fewer pixels and a smaller shadow map.
+export const TOUCH = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
 export function createScene(container, labelLayer) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, TOUCH ? 1.5 : 1.75));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -96,13 +99,18 @@ export function createScene(container, labelLayer) {
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.minDistance = 180;
   controls.maxDistance = 6000;
+  // OrbitControls blocks all touch scrolling; let an up/down finger swipe scroll the page
+  // (on an iPad) while a sideways drag still turns the camera.
+  renderer.domElement.style.touchAction = 'pan-y';
+  let dirty = true; // redraw only when something changed (saves iPad battery)
+  controls.addEventListener('change', () => { dirty = true; });
 
   // ---------- lights
   scene.add(new THREE.HemisphereLight(0xeaf1ff, 0x2a2f38, 1.25));
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.position.set(-700, 2600, 1300);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048);
   sun.shadow.camera.left = -1900; sun.shadow.camera.right = 1900;
   sun.shadow.camera.top = 1300; sun.shadow.camera.bottom = -1300;
   sun.shadow.camera.near = 200; sun.shadow.camera.far = 6000;
@@ -548,30 +556,39 @@ export function createScene(container, labelLayer) {
     }
     camMode.prevRobot.set(fx, 40, -fy);
     controls.update();
+    dirty = true;
   }
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
+    if (!w || !h) return;
     renderer.setSize(w, h, false);
     renderer.domElement.style.width = w + 'px';
     renderer.domElement.style.height = h + 'px';
-    camera.aspect = w / Math.max(1, h);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    dirty = true;
   }
 
-  function render() {
-    controls.update();
+  // force = the robot moved or something on screen changed; otherwise only redraw
+  // while the camera is still moving (dragging or easing to a stop).
+  function render(force = false) {
+    const moved = controls.update();
+    if (!force && !moved && !dirty) return false;
+    dirty = false;
     placeLabels();
     renderer.render(scene, camera);
+    return true;
   }
+  function markDirty() { dirty = true; }
 
   buildCourse(1500);
   // redraw the mat once the rounded font has loaded
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => buildCourse(distance));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { buildCourse(distance); dirty = true; });
   resize();
   setCamera('follow', null);
 
-  return { setRun, update, render, resize, setCamera, opts, camera, controls, renderer };
+  return { setRun, update, render, resize, setCamera, markDirty, opts, camera, controls, renderer };
 }
 
 // =====================================================================

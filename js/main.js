@@ -33,10 +33,21 @@ const state = {
 };
 
 // ---------- 3D + charts
-const scene = createScene($('viewport'), $('labels'));
+// If this device can't do 3D (WebGL), keep everything else working and say so.
+const scene = (() => {
+  try { return createScene($('viewport'), $('labels')); } catch (err) {
+    console.warn('3D view unavailable:', err);
+    const msg = document.createElement('div');
+    msg.className = 'no3d';
+    msg.innerHTML = '<b>The 3D view cannot start on this device.</b><br>The cards, graph and missions still work. Try another browser, or turn on WebGL.';
+    $('viewport').appendChild(msg);
+    const noop = () => {};
+    return { setRun: noop, update: noop, render: noop, resize: noop, setCamera: noop, markDirty: noop, opts: {}, camera: null, controls: null };
+  }
+})();
 const charts = createCharts({
   drift: $('ch-drift'), heading: $('ch-heading'), speed: $('ch-speed'), power: $('ch-power'),
-}, (t) => { state.t = t; state.playing = false; hidePop(); syncPlayBtn(); });
+}, (t) => { state.t = t; state.lastGap = null; state.playing = false; hidePop(); syncPlayBtn(); });
 
 // ---------- tuning controls (whole numbers for students)
 const KNOBS = {
@@ -125,6 +136,7 @@ function applyView() {
   scene.opts.ghost = v.ghost;
   scene.opts.laser = v.laser;
   scene.opts.trails = v.trails;
+  if (typeof redraw === 'function') redraw();
   for (const k in VIEW_OPTS) $(VIEW_OPTS[k]).checked = !!v[k];
   requestAnimationFrame(onResize);
 }
@@ -230,6 +242,7 @@ function renderMissions(fresh = []) {
 }
 
 function confetti(n) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const box = $('viewport');
   const colors = ['#ffc928', '#2f80ed', '#f2761d', '#22c55e', '#db2777', '#7c3aed'];
   for (let i = 0; i < n; i++) {
@@ -261,6 +274,7 @@ $('btn-end').addEventListener('click', () => {
 $('timeline').addEventListener('input', () => {
   if (!state.sim) return;
   state.t = $('timeline').value / 1000 * state.sim.duration;
+  state.lastGap = null;
   state.playing = false; hidePop(); syncPlayBtn();
 });
 $('btn-fast').addEventListener('click', () => {
@@ -275,6 +289,7 @@ $('cam-seg').addEventListener('click', (e) => {
   for (const x of $('cam-seg').children) x.classList.toggle('on', x === b);
   const f = state.sim ? state.sim.frames[frameIndexAt(state.sim.frames, state.t)] : null;
   scene.setCamera(b.dataset.cam, f);
+  redraw();
 });
 
 // ---------- result pop-up
@@ -370,7 +385,7 @@ const fmtS = (v, d = 1) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(d)}`;
 function ghostAt(sim, f, t) {
   if (f.phase === 'done') return { x: 0, d: sim.cfg.distance };
   const fwd = f.leg % 2 === 0;
-  const start = sim.legStarts[f.leg] ?? 0;
+  const start = sim.legStarts[f.leg] || 0;
   const d = sim.ghost.inLeg(t - start);
   return { x: fwd ? d : sim.cfg.distance - d, d };
 }
@@ -474,8 +489,15 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
+// Only redo the 3D frame, graph and cards when the time or the run changed
+// (or something asked for a redraw). A paused robot costs almost nothing,
+// which matters on iPad batteries.
+const drawn = { t: -1, sim: null };
+let needDraw = true;
+function redraw() { needDraw = true; }
 function drawFrame() {
-  if (state.sim) {
+  const changed = needDraw || state.t !== drawn.t || state.sim !== drawn.sim;
+  if (state.sim && changed) {
     const frames = state.sim.frames;
     const i = frameIndexAt(frames, state.t);
     const f = frames[i];
@@ -484,8 +506,10 @@ function drawFrame() {
     charts.draw(state.t);
     updateHUD(f, gs);
     $('timeline').value = String(Math.round(state.t / Math.max(0.001, state.sim.duration) * 1000));
+    drawn.t = state.t; drawn.sim = state.sim;
   }
-  scene.render();
+  needDraw = false;
+  scene.render(changed);
 }
 
 // for testing from the console: __lab.show(12.5) jumps to 12.5 s and draws it
@@ -496,7 +520,7 @@ window.__lab = {
   end() { state.t = state.sim.duration; state.playing = false; drawFrame(); onEnd(); return state.sim.result; },
 };
 
-function onResize() { scene.resize(); charts.resize(); }
+function onResize() { scene.resize(); charts.resize(); redraw(); }
 window.addEventListener('resize', onResize);
 new ResizeObserver(onResize).observe($('viewport'));
 

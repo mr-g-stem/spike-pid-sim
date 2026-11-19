@@ -315,7 +315,8 @@ export function score(cfg, frames, events, endReason) {
       const legStartT = legStartTime(events, f.leg);
       if (f.t - legStartT > 0.8) {
         speedSum += Math.abs(f.v); speedN++;
-        (legHead[f.leg] ||= []).push(f.heading);
+        if (!legHead[f.leg]) legHead[f.leg] = [];
+        legHead[f.leg].push(f.heading);
       }
       // swings: heading crosses from one side to the other by at least 1.5 degrees
       const h = f.heading;

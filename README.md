@@ -61,6 +61,21 @@ The matching Pybricks program, which uses `F` as go power and `steer = P * error
 
 With the class robot, F ≈ 47 matches the ghost. P ≈ 5 drives straight. P ≈ 12 or more wiggles. P ≈ 25 shakes so hard it barely moves. A real robot will need its own numbers: tune it the same way, F first, then P.
 
+## iPads
+
+Students can use it on iPads in Safari or Chrome. It needs **iPadOS 15 or newer**, and works in both portrait and landscape.
+
+- **Portrait:** the F and P knobs sit right under the 3D view.
+- **Landscape:** the knobs sit beside the 3D view.
+- **Touch:** a finger swiped sideways on the 3D view turns the camera, and an up/down swipe scrolls the page. The graph and the How it works animations behave the same way.
+- **Easy to tap:** buttons and sliders are larger on touch screens, and double-tap zoom is off, so quick taps on − and + don't zoom the page.
+- **Battery:** the 3D view only redraws when something moves, and it draws at a lower resolution on touch screens.
+- **Add to Home Screen:** in Safari, Share → Add to Home Screen opens it full screen like an app, with its own icon (`manifest.webmanifest`, `icons/`, made by `node tools/make-icons.mjs`).
+- **No import maps:** three.js is loaded by relative path, so older Safari versions work too.
+- **No 3D:** if a device can't run 3D (WebGL), a message appears and the cards, graph and missions still work.
+
+**Real robots:** Pybricks can't connect to a hub from an iPad, because iOS browsers have no Web Bluetooth (see [Pybricks: what do you need?](https://pybricks.com/learn/getting-started/what-do-you-need/)). Sending code to the robot needs Chrome or Edge on a Chromebook, Windows, Mac, Linux or Android. The Code tab says so.
+
 ## Run it locally
 
 ```bash
@@ -70,7 +85,7 @@ node tools/serve.mjs 8796
 Then open http://localhost:8796 (add `#how` to open the How it works tab). Physics checks:
 
 ```bash
-node tests/physics.test.mjs
+npm test        (physics + Pybricks code checks)
 ```
 
 ## Files

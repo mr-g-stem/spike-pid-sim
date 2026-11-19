@@ -3,6 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <!-- iPad: Share > Add to Home Screen opens it full screen, like an app -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PID Lab">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <title>PID Drive Lab</title>
   <meta name="description" content="Teach a SPIKE Prime robot to drive straight: tune F (go power) and P (steer-back power), then watch it drive.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='8' fill='%23ffc928'/%3E%3Crect x='14' y='20' width='24' height='24' rx='3' fill='%2322262d'/%3E%3Ccircle cx='26' cy='32' r='4' fill='%23fff6dc'/%3E%3Ccircle cx='48' cy='32' r='5' fill='%2334d399'/%3E%3C/svg%3E">
@@ -10,12 +18,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
   <link rel="stylesheet" href="css/style.css">
-  <script type="importmap">
-    { "imports": {
-        "three": "./vendor/three.module.min.js",
-        "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js"
-    } }
-  </script>
 </head>
 <body>
   <header class="top">
@@ -91,18 +93,18 @@
 
       <div class="transport">
         <button class="btn go" id="btn-run" title="Run with these settings (R)">▶ Go!</button>
-        <button class="btn icon" id="btn-play" title="Pause / play (space)">❚❚</button>
-        <button class="btn icon" id="btn-replay" title="Watch again">↺</button>
+        <button class="btn icon" id="btn-play" title="Pause / play (space)" aria-label="Pause or play">❚❚</button>
+        <button class="btn icon" id="btn-replay" title="Watch again" aria-label="Watch again">↺</button>
         <input type="range" id="timeline" min="0" max="1000" value="0" aria-label="Timeline">
         <button class="btn fast" id="btn-fast" aria-pressed="false" title="Play twice as fast">2× faster</button>
       </div>
 
       <div class="charts">
-        <canvas id="ch-drift" class="ch-main"></canvas>
+        <canvas id="ch-drift" class="ch-main" role="img" aria-label="Graph of how far the robot is from the path over time. Tap it to jump to that moment."></canvas>
         <div class="more-charts" id="more-charts" hidden>
-          <canvas id="ch-heading"></canvas>
-          <canvas id="ch-speed"></canvas>
-          <canvas id="ch-power"></canvas>
+          <canvas id="ch-heading" role="img" aria-label="Graph of the gyro heading over time"></canvas>
+          <canvas id="ch-speed" role="img" aria-label="Graph of the robot speed and the ghost speed"></canvas>
+          <canvas id="ch-power" role="img" aria-label="Graph of left and right motor power"></canvas>
         </div>
       </div>
     </section>
@@ -141,7 +143,7 @@
       <div class="card">
         <div class="card-h"><h2>Missions</h2><span class="mcount" id="mcount">0 of 5</span></div>
         <ol class="missions" id="missions">
-          <li data-m="watch"><i class="tick"></i><div><b>Watch it drift</b><span>Press <b>Go!</b> and watch. Does the robot stay on the blue path?</span></div></li>
+          <li data-m="watch"><i class="tick"></i><div><b>Watch it drift</b><span>Watch the robot drive to the line and back. Does it stay on the blue path?</span></div></li>
           <li data-m="f"><i class="tick"></i><div><b>Keep up with the ghost</b><span>Change <b class="tf">F</b> until your robot keeps up with the see-through ghost robot.</span></div></li>
           <li data-m="p"><i class="tick"></i><div><b>Drive straight</b><span>Now turn <b class="tp">P</b> up until you get ★★★.</span></div></li>
           <li data-m="wiggle"><i class="tick"></i><div><b>Make it wiggle</b><span>What happens if <b class="tp">P</b> is way too big? Try it!</span></div></li>
@@ -222,7 +224,7 @@
           </ul>
           <p class="tip">👆 Drag the robot to spin it around.</p>
         </div>
-        <div class="how-vis"><div class="ex-3d" id="ex-robot"><div class="ex-labels" id="ex-robot-labels"></div></div></div>
+        <div class="how-vis"><div class="ex-3d" id="ex-robot" role="img" aria-label="A 3D SPIKE Prime robot with labels for the hub, gyro, motors, wheels and metal ball"><div class="ex-labels" id="ex-robot-labels"></div></div></div>
       </article>
 
       <article class="how-sec">
@@ -236,7 +238,7 @@
             <button data-weak="0">Both motors exactly the same</button>
           </div>
         </div>
-        <div class="how-vis"><canvas id="ex-drift" class="ex-canvas"></canvas></div>
+        <div class="how-vis"><canvas id="ex-drift" class="ex-canvas" role="img" aria-label="Animation: a robot with a slower left wheel curves off the path"></canvas></div>
       </article>
 
       <article class="how-sec">
@@ -251,7 +253,7 @@
             <div class="ex-verdict" id="ex-f-verdict">…</div>
           </div>
         </div>
-        <div class="how-vis"><canvas id="ex-fcan" class="ex-canvas"></canvas></div>
+        <div class="how-vis"><canvas id="ex-fcan" class="ex-canvas" role="img" aria-label="Animation: your robot races a see-through ghost robot that drives at the perfect speed"></canvas></div>
       </article>
 
       <article class="how-sec">
@@ -266,7 +268,7 @@
           </ul>
           <p class="tip">👆 Drag the robot to turn it.</p>
         </div>
-        <div class="how-vis"><canvas id="ex-gyro" class="ex-canvas grab"></canvas></div>
+        <div class="how-vis"><canvas id="ex-gyro" class="ex-canvas grab" role="img" aria-label="A dial showing the gyro number as the robot turns. Plus means turned right, minus means turned left."></canvas></div>
       </article>
 
       <article class="how-sec">
@@ -282,7 +284,7 @@
           </div>
           <button class="btn small" id="ex-p-bump">💥 Bump it!</button>
         </div>
-        <div class="how-vis"><canvas id="ex-pcan" class="ex-canvas"></canvas></div>
+        <div class="how-vis"><canvas id="ex-pcan" class="ex-canvas" role="img" aria-label="Animation: the robot is bumped, then steers back. Steer equals P times how far off it is. One wheel gets more power and the other gets less."></canvas></div>
       </article>
 
       <article class="how-sec">
@@ -297,7 +299,7 @@
             <li><b>Too big:</b> it steers back too hard, goes past straight, and wiggles.</li>
           </ul>
         </div>
-        <div class="how-vis"><canvas id="ex-lanes" class="ex-canvas tall"></canvas></div>
+        <div class="how-vis"><canvas id="ex-lanes" class="ex-canvas tall" role="img" aria-label="Four robots with P equal to 0, 1, 5 and 16. P 0 drifts far away, P 1 drifts a little, P 5 stays on the path, P 16 wiggles."></canvas></div>
       </article>
 
       <article class="how-sec">
@@ -307,7 +309,7 @@
           <p>Your code does these four steps again and again, <b>100 times every second</b>! That is how it keeps fixing tiny mistakes before they get big.</p>
           <p class="tip">🐢 Here it is slowed way down so you can see each step.</p>
         </div>
-        <div class="how-vis"><canvas id="ex-loop" class="ex-canvas square"></canvas></div>
+        <div class="how-vis"><canvas id="ex-loop" class="ex-canvas square" role="img" aria-label="The loop: check the gyro, how far off, steer back, wait 10 milliseconds, repeated 100 times every second"></canvas></div>
       </article>
 
       <article class="how-sec recipe-sec">
@@ -344,6 +346,7 @@
         <button class="btn primary" id="btn-copy">Copy code</button>
       </div>
       <pre class="code" id="code-out"></pre>
+      <div class="ipad-note"><b>📱 iPads can run this simulator, but they can't send code to the robot.</b> Pybricks connects to the hub over Bluetooth from Chrome or Edge on a Chromebook, Windows, Mac, Linux or Android. iPad and iPhone are not supported (<a href="https://pybricks.com/learn/getting-started/what-do-you-need/" target="_blank" rel="noopener">Pybricks: what do you need?</a>). Python coding in Pybricks is free; block coding needs a Pybricks supporter license.</div>
       <p class="note">A real robot won't use exactly the same numbers, because every robot is a little different. Start with the simulator's F and P, then tune the real robot the same way: F first, then P.</p>
     </div>
   </section>

@@ -1,8 +1,8 @@
 // explain.js: the animated "How it works" page (grades 3-5).
 // Every scene only animates while it is on screen.
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { buildRobot } from './scene.js';
+import * as THREE from '../vendor/three.module.min.js';
+import { OrbitControls } from '../vendor/OrbitControls.js';
+import { buildRobot, TOUCH } from './scene.js';
 import { simulate, ghostSchedule, MM_PER_DEG } from './physics.js';
 
 const FONT = '"Nunito", system-ui, sans-serif';
@@ -13,6 +13,7 @@ const C = {
   yellow: '#ffc928', white: '#fbfbf8', grey: '#c3c8cf', dark: '#363a42', tyre: '#22252b', purple: '#7c3aed',
 };
 const $ = (id) => document.getElementById(id);
+const CALM = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- animation manager
 const stages = [];
@@ -158,7 +159,10 @@ function firstLeg(sim) { return sim.frames.filter((f) => f.leg === 0); }
 
 // =====================================================================
 export function initExplain() {
-  const scenes = [robot3D(), driftScene(), fScene(), gyroScene(), pScene(), lanesScene(), loopScene()];
+  // each scene on its own, so one problem (say, no 3D on this device) can't blank the page
+  const scenes = [robot3D, driftScene, fScene, gyroScene, pScene, lanesScene, loopScene].map((make) => {
+    try { return make(); } catch (err) { console.warn('How it works scene failed:', err); return null; }
+  });
   void scenes;
   sizeAll();
   window.addEventListener('resize', sizeAll);
@@ -171,7 +175,7 @@ function robot3D() {
   const box = $('ex-robot');
   const labelBox = $('ex-robot-labels');
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, TOUCH ? 1.5 : 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -182,7 +186,8 @@ function robot3D() {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(-28, 40, 0);
   controls.enableZoom = false; controls.enablePan = false;
-  controls.autoRotate = true; controls.autoRotateSpeed = 1.6;
+  controls.autoRotate = !CALM; controls.autoRotateSpeed = 1.6;
+  renderer.domElement.style.touchAction = 'pan-y'; // sideways drag spins it, up/down scrolls the page
   controls.enableDamping = true;
   controls.minPolarAngle = 0.35; controls.maxPolarAngle = 1.35;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.6));
