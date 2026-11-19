@@ -1,5 +1,7 @@
 # PID Drive Lab
 
+**Live:** https://mr-g-stem.github.io/spike-pid-sim/ · straight to the lessons: https://mr-g-stem.github.io/spike-pid-sim/#learn · How it works: https://mr-g-stem.github.io/spike-pid-sim/#how
+
 A browser simulator for grades 3–5. Students teach a SPIKE Prime robot running **Pybricks** to drive straight by tuning two numbers:
 
 - **F, go power**: how hard both wheels push forward (0–100).
