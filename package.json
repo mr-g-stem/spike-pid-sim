@@ -1,1 +1,9 @@
-{ "type": "module", "private": true, "scripts": { "test": "node tests/physics.test.mjs && node tests/codegen.test.mjs", "icons": "node tools/make-icons.mjs", "serve": "node tools/serve.mjs 8796" } }
+{
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node tests/physics.test.mjs && node tests/codegen.test.mjs && node tests/minipy.test.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "serve": "node tools/serve.mjs 8796"
+  }
+}

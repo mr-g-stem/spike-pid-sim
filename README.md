@@ -50,6 +50,17 @@ Nine illustrated steps, each with an animation:
 8. The tuning recipe.
 9. Why I and D are locked.
 
+## Learn to code tab
+
+A step-by-step path from zero to a first Pybricks program, for grades 3–5. Every step has a picture or animation, something to try, and a 🔊 Read to me button.
+
+- **Part 1 · Talk to your robot:** a program is a list of steps (an animated robot follows the highlighted line); `import` (a toolbox animation); names with `=` (a swinging name tag: type your own name); `Motor`, `Port` and why the left motor needs `Direction.COUNTERCLOCKWISE` (pick ports, switch the direction off and watch the robot spin in place); how a command is built (who · dot · function · parameters).
+- **Part 2 · Make a motor move:** `run_time(speed, time)` and `run_angle(speed, angle)` with spinning wheels, a stopwatch and the maths; a quiz showing that parameter order matters.
+- **Part 3 · Drive the robot:** `DriveBase(left, right, wheel_diameter=56, axle_track=112)` with a measured diagram; `robot.straight(mm)` on a ruler mat; `robot.turn(deg)` on a protractor (+ right, − left).
+- **Part 4 · Your first program:** a code editor with a practice robot mat. It runs real Pybricks code, lights up the line the robot is on, explains mistakes in kid language ("Did you mean straight?", "Python cares about capital letters", "10 mm = 1 cm"), and has six challenges (out and back, square, triangle, square with a loop, your own command, beep and show). Then `for` loops, `def` with a parameter, and how to send the code to a real hub (Chromebook or computer, not iPad).
+
+The practice robot (`js/minipy.js`) understands the beginner subset: imports, `PrimeHub`, `Motor`, `DriveBase`, `straight`, `turn`, `drive`/`stop`, `settings`, `run_time`, `run_angle`, `run`, `wait`, `hub.speaker.beep`, `hub.display.text/number`, `hub.light.on`, `print`, variables, maths, `for i in range(n):` and `def name(param):`. It is not a full Python. Left wheel motor = port A, right = port B, as on the class robot. Command names and units were checked against docs.pybricks.com. One thing the docs don't say is how a negative speed combines with an angle in `run_angle`, so the lesson keeps speed positive and uses a negative angle to go backward.
+
 ## Code tab
 
 The matching Pybricks program, which uses `F` as go power and `steer = P * error`. Paste it into code.pybricks.com. The left motor is on port A (`Direction.COUNTERCLOCKWISE`) and the right motor is on port B.
@@ -102,6 +113,10 @@ npm test        (physics + Pybricks code checks)
 | `js/scene.js` | three.js mat, robot model, trails, laser, labels, cameras |
 | `js/charts.js` | graphs |
 | `js/explain.js` | the animated How it works page |
+| `js/learn.js`, `css/learn.css` | the Learn to code tab |
+| `js/minipy.js` | the practice Python runner for first programs |
+| `js/draw2d.js` | shared 2D robot drawing |
+| `js/speak.js` | Read to me (device voice) |
 | `js/codegen.js` | Pybricks program generator |
 | `js/main.js` | sliders, missions, playback, cards, teacher settings |
 | `vendor/` | three.js r160 (MIT, see `vendor/three-LICENSE.txt`) |

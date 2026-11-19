@@ -388,14 +388,19 @@ $('btn-copy').addEventListener('click', async () => {
 });
 
 // ---------- tabs
-let explainLoaded = null;
+let explainLoaded = null, learnLoaded = null;
 function showTab(tab) {
   for (const x of document.querySelectorAll('.tabs button')) x.setAttribute('aria-selected', String(x.dataset.tab === tab));
   $('tab-sim').hidden = tab !== 'sim';
   $('tab-code').hidden = tab !== 'code';
   $('tab-how').hidden = tab !== 'how';
+  $('tab-learn').hidden = tab !== 'learn';
   if (tab === 'code') updateCode();
   if (tab === 'sim') requestAnimationFrame(onResize);
+  if (tab === 'learn') {
+    if (!learnLoaded) learnLoaded = import('./learn.js').then((m) => m.initLearn());
+    learnLoaded.then((l) => l && l.resize());
+  }
   if (tab === 'how') {
     if (!explainLoaded) explainLoaded = import('./explain.js').then((m) => m.initExplain());
     explainLoaded.then((ex) => ex && ex.resize());
@@ -600,3 +605,4 @@ onResize();
 runSim(true);
 requestAnimationFrame(tick);
 if (location.hash === '#how') showTab('how');
+if (location.hash === '#learn') showTab('learn');

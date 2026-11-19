@@ -19,6 +19,7 @@
   <!-- loads in the background: if a school filter blocks Google Fonts, the page still shows right away -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/learn.css">
 </head>
 <body>
   <header class="top">
@@ -32,6 +33,7 @@
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="sim">🚗 Drive</button>
       <button role="tab" aria-selected="false" data-tab="how">💡 How it works</button>
+      <button role="tab" aria-selected="false" data-tab="learn">🧩 Learn to code</button>
       <button role="tab" aria-selected="false" data-tab="code">⌨️ Code</button>
     </nav>
   </header>
@@ -338,6 +340,11 @@
         </div>
       </article>
     </div>
+  </section>
+
+  <!-- ===================== LEARN TO CODE (built by js/learn.js) ===================== -->
+  <section id="tab-learn" class="page learn" hidden>
+    <div class="page-inner" id="learn-root"><p class="lp-loading">Loading the lessons…</p></div>
   </section>
 
   <!-- ===================== CODE ===================== -->
