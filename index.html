@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PID Drive Lab</title>
+  <meta name="description" content="Tune F and P on a simulated SPIKE Prime driving base running Pybricks: watch it drift, then drive straight.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='8' fill='%23ffc928'/%3E%3Crect x='14' y='20' width='24' height='24' rx='3' fill='%2322262d'/%3E%3Ccircle cx='26' cy='32' r='4' fill='%23fff6dc'/%3E%3Ccircle cx='48' cy='32' r='5' fill='%2334d399'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "./vendor/three.module.min.js",
+        "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js"
+    } }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>PID Drive Lab</h1>
+        <p>SPIKE Prime + Pybricks · tune <b class="f">F</b>, then <b class="p">P</b></p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="sim">Simulator</button>
+      <button role="tab" aria-selected="false" data-tab="code">Pybricks code</button>
+      <button role="tab" aria-selected="false" data-tab="how">How F + P work</button>
+    </nav>
+  </header>
+
+  <main id="tab-sim" class="layout">
+    <section class="stage">
+      <div class="viewport" id="viewport">
+        <div class="labels" id="labels"></div>
+
+        <div class="hud hud-tl">
+          <div class="status"><span class="dot" id="st-dot"></span><span id="st-phase">Ready</span><span class="trip" id="st-trip"></span></div>
+          <div class="readouts">
+            <div class="ro"><span>Gyro heading</span><b id="ro-heading">0.0°</b><small id="ro-heading-sub">straight</small></div>
+            <div class="ro"><span>Off the path</span><b id="ro-drift">0.0 cm</b><small id="ro-drift-sub">on the line</small></div>
+            <div class="ro"><span>Speed</span><b id="ro-speed">0</b><small id="ro-speed-sub">of 200 mm/s</small></div>
+          </div>
+        </div>
+
+        <div class="hud hud-tr">
+          <div class="seg" id="cam-seg" role="group" aria-label="Camera">
+            <button data-cam="follow" class="on">Follow</button>
+            <button data-cam="driver">Behind</button>
+            <button data-cam="top">Top</button>
+            <button data-cam="side">Side</button>
+          </div>
+          <details class="viewopts">
+            <summary>Show ▾</summary>
+            <div class="toggles">
+              <label><input type="checkbox" id="opt-ghost" checked> Perfect robot</label>
+              <label><input type="checkbox" id="opt-laser" checked> Heading laser</label>
+              <label><input type="checkbox" id="opt-trails" checked> Trails</label>
+              <label><input type="checkbox" id="opt-labels" checked> Labels</label>
+              <label><input type="checkbox" id="opt-live" checked> Live program</label>
+              <label><input type="checkbox" id="opt-motors" checked> Motor bars</label>
+            </div>
+          </details>
+        </div>
+
+        <div class="hud hud-bl" id="live">
+          <div class="live-h"><span>Inside the program, right now</span><button id="live-hide" title="Hide">–</button></div>
+          <pre id="live-code"></pre>
+        </div>
+
+        <div class="hud hud-br" id="motors">
+          <div class="motors-h">Motor power <small>(seen from behind)</small></div>
+          <div class="mbars">
+            <div class="mbar" id="mb-left"><div class="track"><div class="zero"></div><div class="fpart"></div><div class="ppart"></div></div><b>0%</b><span>LEFT · A</span></div>
+            <div class="mbar" id="mb-right"><div class="track"><div class="zero"></div><div class="fpart"></div><div class="ppart"></div></div><b>0%</b><span>RIGHT · B</span></div>
+          </div>
+          <div class="mkey"><i class="kf"></i>F part <i class="kp"></i>P part</div>
+        </div>
+
+        <div class="result-pop" id="result-pop" hidden>
+          <div class="stars" id="pop-stars"></div>
+          <h2 id="pop-title"></h2>
+          <p id="pop-text"></p>
+          <div class="pop-stats" id="pop-stats"></div>
+          <div class="pop-actions"><button class="btn" id="pop-replay">Watch again</button><button class="btn primary" id="pop-close">Tune and run again</button></div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn primary run" id="btn-run" title="Run with these settings (R)">▶ Run</button>
+        <button class="btn icon" id="btn-play" title="Pause / play (space)">❚❚</button>
+        <button class="btn icon" id="btn-replay" title="Watch again from the start">⟲</button>
+        <input type="range" id="timeline" min="0" max="1000" value="0" aria-label="Timeline">
+        <span class="time" id="time">0.0 / 0.0 s</span>
+        <div class="seg small" id="speed-seg" role="group" aria-label="Playback speed">
+          <button data-speed="0.5">½×</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button>
+        </div>
+        <button class="btn" id="btn-end" title="Skip to the result">Skip ⏭</button>
+      </div>
+
+      <div class="charts">
+        <canvas id="ch-heading"></canvas>
+        <canvas id="ch-speed"></canvas>
+        <canvas id="ch-power"></canvas>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="card tune">
+        <div class="card-h"><h2>Tune</h2><span class="steps"><span class="step" id="step-f">1 · F first</span><span class="step" id="step-p">2 · then P</span></span></div>
+
+        <div class="knob f">
+          <div class="knob-top"><label for="kf">F <em>feedforward</em></label><input type="number" id="kf-num" step="0.005" min="0" max="0.45"></div>
+          <input type="range" id="kf" min="0" max="0.45" step="0.005">
+          <p class="hint" id="kf-hint">Power for the speed you want.</p>
+        </div>
+        <div class="split" id="split-box" hidden>
+          <div class="knob f mini">
+            <div class="knob-top"><label for="kfL">F left</label><input type="number" id="kfL-num" step="0.001" min="0" max="0.45"></div>
+            <input type="range" id="kfL" min="0" max="0.45" step="0.001">
+          </div>
+          <div class="knob f mini">
+            <div class="knob-top"><label for="kfR">F right</label><input type="number" id="kfR-num" step="0.001" min="0" max="0.45"></div>
+            <input type="range" id="kfR" min="0" max="0.45" step="0.001">
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="splitF"> Separate F for each motor <small>(level 2)</small></label>
+
+        <div class="knob p">
+          <div class="knob-top"><label for="kp">P <em>proportional</em></label><input type="number" id="kp-num" step="0.1" min="0" max="40"></div>
+          <input type="range" id="kp" min="0" max="40" step="0.1">
+          <p class="hint" id="kp-hint">Extra steering per degree off course.</p>
+        </div>
+
+        <div class="locked-row">
+          <div class="knob locked" id="ki-box">
+            <div class="knob-top"><label for="ki">I <em>integral</em></label><span class="lock" title="Locked in this lab">🔒 0</span></div>
+            <input type="range" id="ki" min="0" max="2" step="0.01" disabled>
+          </div>
+          <div class="knob locked" id="kd-box">
+            <div class="knob-top"><label for="kd">D <em>derivative</em></label><span class="lock" title="Locked in this lab">🔒 0</span></div>
+            <input type="range" id="kd" min="0" max="2" step="0.01" disabled>
+          </div>
+        </div>
+        <p class="hint locked-note">I and D are locked: this lab tunes F and P only.</p>
+
+        <div class="knob s">
+          <div class="knob-top"><label for="speed">Target speed</label><span class="val"><b id="speed-val">200</b> mm/s</span></div>
+          <input type="range" id="speed" min="100" max="400" step="10">
+        </div>
+        <label class="check"><input type="checkbox" id="autorun" checked> Run again when I let go of a slider</label>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Try these</h2></div>
+        <div class="presets" id="presets">
+          <button data-preset="start">Start: drifting</button>
+          <button data-preset="fgood">F tuned, P = 0</button>
+          <button data-preset="plow">P too small</button>
+          <button data-preset="pgood">Good P</button>
+          <button data-preset="phigh">P too big</button>
+          <button data-preset="pwild">Way too big</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>The robot</h2></div>
+        <div class="robot-info">
+          <div><span>Weaker motor</span><b id="weak-info">left, 2.5% weaker</b></div>
+          <div><span>Loop</span>
+            <select id="loopMs"><option value="10">wait(10)</option><option value="20">wait(20)</option><option value="50">wait(50)</option></select>
+          </div>
+          <div><span>Trips</span>
+            <select id="trips"><option value="1">1 out and back</option><option value="2">2 out and back</option><option value="3">3 out and back</option></select>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="bumps" checked> Bumps on the mat</label>
+        <label class="check"><input type="checkbox" id="noise" checked> Gyro noise</label>
+        <div class="row-btns">
+          <button class="btn" id="btn-mystery">🎲 Mystery robot</button>
+          <button class="btn ghosty" id="btn-reveal" hidden>Reveal</button>
+          <button class="btn ghosty" id="btn-normal" hidden>Back to the class robot</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Run log</h2><button class="link" id="btn-clear">clear</button></div>
+        <table class="log">
+          <thead><tr><th>#</th><th class="f">F</th><th class="p">P</th><th>off path</th><th>wobble</th><th>speed</th><th>★</th></tr></thead>
+          <tbody id="log-body"><tr class="empty"><td colspan="7">Runs show up here. Click one to load its F and P.</td></tr></tbody>
+        </table>
+      </div>
+    </aside>
+  </main>
+
+  <section id="tab-code" class="page" hidden>
+    <div class="page-inner">
+      <div class="code-head">
+        <div>
+          <h2>Pybricks program</h2>
+          <p>Uses your current F, P and speed. Paste it into <a href="https://code.pybricks.com" target="_blank" rel="noopener">code.pybricks.com</a> and run it on a SPIKE Prime hub with Pybricks installed. Left wheel motor on port A, right on port B.</p>
+        </div>
+        <button class="btn primary" id="btn-copy">Copy code</button>
+      </div>
+      <pre class="code" id="code-out"></pre>
+      <p class="note">The real robot won't use exactly the same numbers. Every robot is a little different: motors, tyres, battery, the mat. Start from the simulator's F and P, then fine-tune on the real robot the same way: F first, then P.</p>
+    </div>
+  </section>
+
+  <section id="tab-how" class="page" hidden>
+    <div class="page-inner how">
+      <h2>How F + P drive a robot straight</h2>
+      <div class="how-grid">
+        <div class="how-card f">
+          <h3><b>F</b> · feedforward</h3>
+          <p class="big">“How much power do I need to go this fast?”</p>
+          <p>You know the speed you want before the robot moves, so you can set the power ahead of time. That's F: power = F × speed.</p>
+          <ul>
+            <li><b>Too low:</b> the robot crawls, or doesn't move at all. Motors need a little power just to start turning.</li>
+            <li><b>Too high:</b> it races past the speed you asked for.</li>
+            <li><b>Tuned:</b> on the speed graph, the blue line sits on the dashed line.</li>
+          </ul>
+          <p>F does most of the work, but it can't fix drift. It gives both motors the same power, and no two motors are exactly the same.</p>
+        </div>
+        <div class="how-card p">
+          <h3><b>P</b> · proportional</h3>
+          <p class="big">“I've turned. Steer back, harder the further off I am.”</p>
+          <p>The hub's gyro measures the heading. Error = 0 − heading. P turns that error into steering: one motor gets a little more power, the other a little less.</p>
+          <ul>
+            <li><b>P = 0:</b> the gyro is ignored and the robot drifts.</li>
+            <li><b>Too small:</b> it steers back slowly and still drifts a few cm.</li>
+            <li><b>Too big:</b> every correction overshoots. The robot shakes from side to side, and the laser swings back and forth.</li>
+          </ul>
+        </div>
+        <div class="how-card locked">
+          <h3><b>I</b> and <b>D</b> · locked</h3>
+          <p><b>I</b> adds up small errors over time to remove a leftover lean. With a good F the lean is tiny. I also builds up while the robot waits at each line, so it lurches when it sets off again.</p>
+          <p><b>D</b> reacts to how fast the error is changing, which helps stop overshoot in fast turns. When you're driving straight, it mostly magnifies gyro noise.</p>
+        </div>
+      </div>
+      <h3 class="loop-h">One trip through the loop (every 10 ms)</h3>
+      <pre class="code small">heading = hub.imu.heading()      # gyro: + means it turned right
+error   = 0 - heading            # how far off straight, + means steer right
+base    = KF * SPEED             # F: power for the speed we want
+correction = KP * error          # P: steer back
+left.dc(base + correction)       # left gets more when we steer right
+right.dc(base - correction)
+wait(10)</pre>
+      <h3 class="loop-h">What you are looking at</h3>
+      <ul class="legend-list">
+        <li><i style="background:#ff8a3d"></i><b>Orange laser</b>: where the robot is pointing. <i style="background:#34d399"></i><b>Green dashes</b>: straight ahead. The orange wedge between them is the heading error.</li>
+        <li><i style="background:#f87171"></i><b>Red line</b>: how far the robot is from the perfect path.</li>
+        <li><i style="background:#7cc4ff"></i><b>See-through robot</b>: a perfect robot at exactly the target speed. If yours falls behind, F is too low.</li>
+        <li><i style="background:#ff8a3d"></i><b>Curved arrow on the hub</b>: which way P is steering, and how hard.</li>
+        <li><i style="background:#ffd23f"></i><b>Yellow bumps</b>: the same bumps on every run, so you can compare runs fairly.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Simulator for classroom use. SPIKE™ and LEGO® are trademarks of the LEGO Group, which does not sponsor or endorse this project. Pybricks is an independent open-source project.
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
